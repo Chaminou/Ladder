@@ -1,0 +1,8 @@
+tqdm
+
+keras
+tensorflow
+gym
+
+matplotlib
+
