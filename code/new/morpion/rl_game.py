@@ -5,6 +5,10 @@ import random
 from collections import deque
 import pickle5 as pickle
 
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import Adam
+
 class Supervisor :
     def __init__(self, game) :
         self.game = game
@@ -27,7 +31,7 @@ class Supervisor :
                         turn_p1.append(-1)
                         p1_mem.append(turn_p1)
                         p1.memorize(p1_mem)
-                        return
+                        break
                     else :
                         current_game.apply_move(move)
                         current_game.detect_end(current_game.board)
@@ -42,7 +46,7 @@ class Supervisor :
                         turn_p2.append(-1)
                         p2_mem.append(turn_p2)
                         p2.memorize(p2_mem)
-                        return
+                        break
                     else :
                         current_game.apply_move(move)
                         current_game.detect_end(current_game.board)
@@ -50,7 +54,6 @@ class Supervisor :
 
                 if i != 0 :
                     if current_game.p1_turn :
-                        #print(i, turn_p1, current_game.p1_turn)
                         turn_p1.append(current_game.board.board.copy())
                         turn_p1.append(current_game.done)
                         if current_game.done :
@@ -63,10 +66,8 @@ class Supervisor :
                         else :
                             turn_p1.append(0)
                         p1_mem.append(turn_p1)
-                        #print(turn_p1)
                         turn_p1 = []
                     else :
-                        #print(i, turn_p2, not current_game.p1_turn)
                         turn_p2.append(current_game.board.board.copy())
                         turn_p2.append(current_game.done)
                         if current_game.done :
@@ -79,7 +80,6 @@ class Supervisor :
                         else :
                             turn_p2.append(0)
                         p2_mem.append(turn_p2)
-                        #print(turn_p2)
                         turn_p2 = []
 
                     if current_game.done :
@@ -261,13 +261,13 @@ class Debug(Agent) :
         return move
 
 
-class DQNAgent :
+class DQNAgent(Agent) :
     def __init__(self, state_size, action_size) :
         self.state_size = state_size
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95    # discount rate
-        self.epsilon = 1.0  # exploration rate
+        self.epsilon = 0  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0005
@@ -288,10 +288,11 @@ class DQNAgent :
             move = np.zeros((9), dtype=int)
             move[random.randrange(9)] = 1
             return move
-        act_values = self.model.predict(board)
-        action = np.zeros((9), dtype=np.int8)
-        action[np.argmax(act_values[0])] = 1
-        return action
+        formated_board = np.reshape(board.board, [1, 9])
+        act_values = self.model.predict(formated_board)
+        move = np.zeros((9), dtype=np.int8)
+        move[np.argmax(act_values[0])] = 1
+        return move
 
     def train(self, minibatch_size, batch):
         minibatch = random.sample(batch, batch_size)
@@ -339,15 +340,17 @@ class BatchMorpion :
         return batch
 
 if __name__ == '__main__' :
-    p1 = Singe()
+    p1 = DQNAgent(9, 9)
+    #p1 = Singe()
     p2 = Singe()
 
     mj = Supervisor(Morpion)
-    mj.simulate(p1, p2, 1, verbose=False)
+    mj.simulate(p1, p2, 10, verbose=False)
 
     p1.save_memory('p1.mem')
 
     batcher = BatchMorpion()
     batch = batcher.create_batch('p1.mem')
 
-    neural_agent = DQNAgent(9, 9)
+    #p1.train(32, batch)
+
